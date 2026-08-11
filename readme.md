@@ -1,6 +1,6 @@
 # Library Manager
 
-Sistema de gerenciamento de biblioteca desenvolvido em PHP, MariaDB, Bootstrap e TypeScript.
+Sistema de gerenciamento de biblioteca desenvolvido em PHP, MySql, Bootstrap e TypeScript.
 
 ## Tecnologias
 

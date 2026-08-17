@@ -1,78 +1,108 @@
 <?php
-include 'includes/conexao.php';
-include 'includes/functions.php';
-include 'includes/header.php';
-include 'includes/menu.php';
+require_once __DIR__ . '/../includes/conexao.php';
+require_once __DIR__ . '/../includes/funcoes.php';
 
-$resultado = listarDados($conexao, "livro");
-$livros = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $dados = [
+        'titulo'                => $_POST['titulo'],
+        'autor_id'               => $_POST['autor_id'],
+        'categoria_id'           => $_POST['categoria_id'],
+        'quantidade_total'       => $_POST['quantidade_total'],
+        'quantidade_disponivel'  => $_POST['quantidade_total'],
+    ];
 
-if($resultado){
-    while($row = mysqli_fetch_assoc($resultado)){
-        $livros[] = $row;
+    if (!validarTexto($dados['titulo']) || !validarNumeroPositivo($dados['quantidade_total'])) {
+        $erro = "Preencha o título e uma quantidade válida.";
+    } elseif (!empty($_POST['id'])) {
+        atualizarRegistro($conexao, 'livros', $dados, $_POST['id']);
+    } else {
+        inserirRegistro($conexao, 'livros', $dados);
     }
 }
 
-$busca = $_GET['busca'] ?? '';
 
-if(!empty($busca)){
-    $livros = filtrarLista($livros, 'titulo', $busca);
+if (isset($_GET['excluir'])) {
+    $resultadoExclusao = excluirLivro($conexao, (int)$_GET['excluir']);
+    $mensagemExclusao = $resultadoExclusao['mensagem'];
+    $tipoMensagem = $resultadoExclusao['sucesso'] ? 'alert-success' : 'alert-danger';
 }
+
+$autores = listarDados($conexao, 'autores');
+$categorias = listarDados($conexao, 'categorias');
+$livros = mysqli_query($conexao, "
+    SELECT l.*, a.nome AS autor, c.nome AS categoria
+    FROM livros l
+    LEFT JOIN autores a ON a.id = l.autor_id
+    LEFT JOIN categorias c ON c.id = l.categoria_id
+");
+
+require_once __DIR__ . '/../includes/header.php';
+require_once __DIR__ . '/../includes/sidebar.php';
 ?>
 
-<div class="container mt-4">
-    <h2 class="mb-4">Livros</h2>
+<div class="container-fluid p-4">
+  <h1>Livros</h1>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET">
-                <div class="row">
-                    <div class="col-md-10">
-                        <input type="text" name="busca" class="form-control" placeholder="Pesquisar por título..." value="<?php echo htmlspecialchars($busca); ?>">
-                    </div>
-                    <div class="col-md-2">
-                        <button class="btn btn-primary w-100">Pesquisar</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
+  <?php if (!empty($mensagemExclusao)): ?>
+    <div class="alert <?= $tipoMensagem ?>"><?= htmlspecialchars($mensagemExclusao) ?></div>
+  <?php endif; ?>
+  <?php if (!empty($erro)): ?>
+    <div class="alert alert-danger"><?= htmlspecialchars($erro) ?></div>
+  <?php endif; ?>
 
-    <div class="card">
-        <div class="card-header">
-            Lista de Livros
-        </div>
-        <div class="card-body">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Título</th>
-                        <th>ISBN</th>
-                        <th>Ano</th>
-                        <th>Quantidade</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if(!empty($livros)): ?>
-                        <?php foreach($livros as $livro): ?>
-                            <tr>
-                                <td><?php echo $livro['id_livro']; ?></td>
-                                <td><?php echo $livro['titulo']; ?></td>
-                                <td><?php echo $livro['isbn']; ?></td>
-                                <td><?php echo $livro['ano']; ?></td>
-                                <td><?php echo $livro['quantidade']; ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="5">Nenhum livro encontrado.</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
+  
+  <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalLivro">
+    Novo Livro
+  </button>
+
+  <table class="table table-striped">
+    <thead><tr><th>Título</th><th>Autor</th><th>Categoria</th><th>Disponíveis</th><th></th></tr></thead>
+    <tbody>
+      <?php while ($livro = mysqli_fetch_assoc($livros)): ?>
+      <tr>
+        <td><?= htmlspecialchars($livro['titulo']) ?></td>
+        <td><?= htmlspecialchars($livro['autor'] ?? '-') ?></td>
+        <td><?= htmlspecialchars($livro['categoria'] ?? '-') ?></td>
+        <td><?= (int)$livro['quantidade_disponivel'] ?></td>
+        <td>
+          <a href="?excluir=<?= $livro['id'] ?>" class="btn btn-sm btn-danger"
+             onclick="return confirm('Excluir este livro?')">Excluir</a>
+        </td>
+      </tr>
+      <?php endwhile; ?>
+    </tbody>
+  </table>
 </div>
 
-<?php include 'includes/footer.php'; ?>
+<div class="modal fade" id="modalLivro" tabindex="-1">
+  <div class="modal-dialog">
+    <form method="POST" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Novo Livro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="text" name="titulo" class="form-control mb-2" placeholder="Título" required>
+
+        <select name="autor_id" class="form-select mb-2">
+          <?php mysqli_data_seek($autores, 0); while ($a = mysqli_fetch_assoc($autores)): ?>
+            <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nome']) ?></option>
+          <?php endwhile; ?>
+        </select>
+
+        <select name="categoria_id" class="form-select mb-2">
+          <?php mysqli_data_seek($categorias, 0); while ($c = mysqli_fetch_assoc($categorias)): ?>
+            <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nome']) ?></option>
+          <?php endwhile; ?>
+        </select>
+
+        <input type="number" name="quantidade_total" class="form-control" placeholder="Quantidade" min="1" required>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

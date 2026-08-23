@@ -37,7 +37,7 @@ function listarDados($conexao, $tabela){
 
 /*
 |--------------------------------------------------------------------------
-| FILTRO EM ARRAY (TECH FORGE)
+| FILTRO EM ARRAY
 |--------------------------------------------------------------------------
 | Retorna apenas os itens que contenham o valor buscado no campo informado
 */

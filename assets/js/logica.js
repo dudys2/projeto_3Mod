@@ -1,12 +1,12 @@
-// (reduce)
+// reduce: soma o valor de todas as multas
 export function totalMultas(lista) {
     return lista.reduce((soma, emprestimo) => soma + emprestimo.valor_multa, 0);
 }
-// :(filter)
+// filter: separa os empréstimos por status
 export function filtrarPorStatus(lista, status) {
     return lista.filter(emprestimo => emprestimo.status === status);
 }
-//  (Destaques)
+// ranking: descobre o título mais frequente na lista
 export function livroMaisEmprestado(lista) {
     const contagem = {};
     lista.forEach(emprestimo => {
@@ -23,7 +23,7 @@ export function livroMaisEmprestado(lista) {
     }
     return destaque;
 }
-// (map)
+// map (usado no render.ts): formata número em moeda brasileira
 export function formatarMoeda(valor) {
     return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }

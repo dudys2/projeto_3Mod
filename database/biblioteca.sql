@@ -42,18 +42,42 @@ CREATE TABLE emprestimos (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );
 
--- dados de teste
-INSERT INTO autores (nome) VALUES ('J.R.R. Tolkien'), ('Robert C. Martin');
-INSERT INTO categorias (nome) VALUES ('Fantasia'), ('Tecnologia');
+
+INSERT INTO autores (nome) VALUES
+('J.R.R. Tolkien'), ('Robert C. Martin'), ('Machado de Assis'),
+('George Orwell'), ('Agatha Christie'), ('Yuval Noah Harari');
+
+INSERT INTO categorias (nome) VALUES
+('Fantasia'), ('Tecnologia'), ('Literatura Nacional'), ('Ficção'), ('Não-ficção');
+
 INSERT INTO livros (titulo, autor_id, categoria_id, quantidade_total, quantidade_disponivel) VALUES
-('O Hobbit', 1, 1, 3, 2),
-('Clean Code', 2, 2, 2, 0);
+('O Hobbit', 1, 1, 3, 1),
+('O Senhor dos Anéis', 1, 1, 2, 2),
+('Clean Code', 2, 2, 2, 0),
+('The Pragmatic Programmer', 2, 2, 3, 3),
+('Dom Casmurro', 3, 3, 4, 3),
+('1984', 4, 4, 3, 1),
+('Assassinato no Expresso Oriente', 5, 4, 2, 2),
+('Sapiens', 6, 5, 3, 2);
+
 INSERT INTO usuarios (nome, email) VALUES
 ('Ana Souza', 'ana@escola.com'),
-('Bruno Lima', 'bruno@escola.com');
-INSERT INTO emprestimos (livro_id, usuario_id, data_emprestimo, data_prevista_devolucao, valor_multa, status) VALUES
-(1, 1, '2026-07-20', '2026-08-10', 12.00, 'atrasado'),
-(2, 2, '2026-08-01', '2026-08-20', 0.00, 'ativo');
+('Bruno Lima', 'bruno@escola.com'),
+('Carla Nunes', 'carla@escola.com'),
+('Diego Alves', 'diego@escola.com'),
+('Elisa Prado', 'elisa@escola.com');
+
+INSERT INTO emprestimos (livro_id, usuario_id, data_emprestimo, data_prevista_devolucao, data_devolucao, valor_multa, status) VALUES
+(1, 1, '2026-07-20', '2026-08-10', NULL, 14.00, 'atrasado'),
+(3, 2, '2026-08-01', '2026-08-20', NULL, 0.00, 'ativo'),
+(6, 3, '2026-07-25', '2026-08-12', NULL, 8.00, 'atrasado'),
+(5, 4, '2026-07-10', '2026-07-30', '2026-07-29', 0.00, 'devolvido'),
+(1, 5, '2026-06-15', '2026-07-01', '2026-07-05', 8.00, 'devolvido'),
+(7, 1, '2026-08-05', '2026-08-25', NULL, 0.00, 'ativo'),
+(8, 2, '2026-08-10', '2026-08-30', NULL, 0.00, 'ativo'),
+(3, 3, '2026-06-01', '2026-06-20', '2026-06-18', 0.00, 'devolvido'),
+(6, 4, '2026-08-12', '2026-08-28', NULL, 0.00, 'ativo'),
+(8, 5, '2026-07-05', '2026-07-25', '2026-07-24', 0.00, 'devolvido');
 
 -- 1) Function reutilizável: calcula dias de atraso
 DELIMITER $$
@@ -105,7 +129,7 @@ BEGIN
 END $$
 DELIMITER ;
 
--- 5) Procedure: busca + filtro + paginação (pra emprestimos.php)
+-- 5) Procedure: busca + filtro + paginação (pra pages/emprestimos.php)
 DELIMITER $$
 CREATE PROCEDURE sp_listar_emprestimos(
     IN p_status VARCHAR(20),

@@ -1,11 +1,17 @@
-# Library Manager
+# Sistema de Biblioteca
 
-Sistema de gerenciamento de biblioteca desenvolvido em PHP, MySql, Bootstrap e TypeScript.
+## Recompilar o TypeScript (se editar algo em ts/)
 
-## Tecnologias
+```
+cd ts
+npm install -g typescript   (só na primeira vez)
+tsc --project tsconfig.json
+```
 
-- PHP
-- Bootstrap 5
-- TypeScript
-- HTML5
-- CSS3
+## Onde está cada item da rubrica
+
+- Banco de Dados Avançado → `database/biblioteca.sql` (CTE, views, procedure, trigger, function)
+- 3 CRUDs + Bootstrap + template → `pages/*.php`, `includes/*.php`
+- Regra de exclusão → `excluirLivro()` em `includes/funcoes.php`
+- Lógica Avançada (TypeScript) → `ts/interfaces.ts`, `ts/logica.ts`
+- Tech Forge (API, DOM, dashboard) → `api/dashboard.php`, `ts/api.ts`, `ts/render.ts`, `ts/main.ts`

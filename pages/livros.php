@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/conexao.php';
 require_once __DIR__ . '/../includes/funcoes.php';
 
+// CRUD: inclusão e edição
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $dados = [
         'titulo'                => $_POST['titulo'],
@@ -20,11 +21,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-
+// Exclusão com regra de negócio: bloqueia se o livro está emprestado
 if (isset($_GET['excluir'])) {
     $resultadoExclusao = excluirLivro($conexao, (int)$_GET['excluir']);
     $mensagemExclusao = $resultadoExclusao['mensagem'];
     $tipoMensagem = $resultadoExclusao['sucesso'] ? 'alert-success' : 'alert-danger';
+}
+
+// Edição (carrega o registro no modal)
+$livroEditando = null;
+if (isset($_GET['editar'])) {
+    $livroEditando = buscarPorId($conexao, 'livros', (int)$_GET['editar']);
 }
 
 $autores = listarDados($conexao, 'autores');
@@ -42,6 +49,7 @@ require_once __DIR__ . '/../includes/sidebar.php';
 
 <div class="container-fluid p-4">
   <h1>Livros</h1>
+  <p class="subtitulo">O acervo completo, com autor, categoria e disponibilidade.</p>
 
   <?php if (!empty($mensagemExclusao)): ?>
     <div class="alert <?= $tipoMensagem ?>"><?= htmlspecialchars($mensagemExclusao) ?></div>
@@ -50,53 +58,72 @@ require_once __DIR__ . '/../includes/sidebar.php';
     <div class="alert alert-danger"><?= htmlspecialchars($erro) ?></div>
   <?php endif; ?>
 
-  
   <button class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#modalLivro">
     Novo Livro
   </button>
 
-  <table class="table table-striped">
-    <thead><tr><th>Título</th><th>Autor</th><th>Categoria</th><th>Disponíveis</th><th></th></tr></thead>
-    <tbody>
-      <?php while ($livro = mysqli_fetch_assoc($livros)): ?>
-      <tr>
-        <td><?= htmlspecialchars($livro['titulo']) ?></td>
-        <td><?= htmlspecialchars($livro['autor'] ?? '-') ?></td>
-        <td><?= htmlspecialchars($livro['categoria'] ?? '-') ?></td>
-        <td><?= (int)$livro['quantidade_disponivel'] ?></td>
-        <td>
+  <?php if (mysqli_num_rows($livros) === 0): ?>
+    <p class="text-muted">Nenhum livro cadastrado ainda.</p>
+  <?php else: ?>
+  <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+    <?php while ($livro = mysqli_fetch_assoc($livros)): ?>
+    <div class="col">
+      <div class="livro-card">
+        <div class="capa-livro capa-<?= corCapa($livro['titulo']) ?>">
+          <span class="capa-titulo"><?= htmlspecialchars($livro['titulo']) ?></span>
+          <span class="capa-autor"><?= htmlspecialchars($livro['autor'] ?? 'Autor desconhecido') ?></span>
+        </div>
+        <div class="livro-meta">
+          <?= htmlspecialchars($livro['categoria'] ?? 'Sem categoria') ?> ·
+          <?= (int)$livro['quantidade_disponivel'] ?> disponível(is)
+        </div>
+        <div class="livro-acoes">
+          <a href="?editar=<?= $livro['id'] ?>" class="btn btn-sm btn-secondary">Editar</a>
           <a href="?excluir=<?= $livro['id'] ?>" class="btn btn-sm btn-danger"
-             onclick="return confirm('Excluir este livro?')">Excluir</a>
-        </td>
-      </tr>
-      <?php endwhile; ?>
-    </tbody>
-  </table>
+             onclick="return confirm('Excluir este livro? Essa ação não pode ser desfeita.')">Excluir</a>
+        </div>
+      </div>
+    </div>
+    <?php endwhile; ?>
+  </div>
+  <?php endif; ?>
 </div>
 
 <div class="modal fade" id="modalLivro" tabindex="-1">
   <div class="modal-dialog">
     <form method="POST" class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Novo Livro</h5>
+        <h5 class="modal-title"><?= $livroEditando ? 'Editar Livro' : 'Novo Livro' ?></h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <input type="text" name="titulo" class="form-control mb-2" placeholder="Título" required>
+        <?php if ($livroEditando): ?>
+          <input type="hidden" name="id" value="<?= $livroEditando['id'] ?>">
+        <?php endif; ?>
+
+        <input type="text" name="titulo" class="form-control mb-2" placeholder="Título"
+               value="<?= htmlspecialchars($livroEditando['titulo'] ?? '') ?>" required>
 
         <select name="autor_id" class="form-select mb-2">
           <?php mysqli_data_seek($autores, 0); while ($a = mysqli_fetch_assoc($autores)): ?>
-            <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nome']) ?></option>
+            <option value="<?= $a['id'] ?>"
+              <?= (isset($livroEditando['autor_id']) && $livroEditando['autor_id'] == $a['id']) ? 'selected' : '' ?>>
+              <?= htmlspecialchars($a['nome']) ?>
+            </option>
           <?php endwhile; ?>
         </select>
 
         <select name="categoria_id" class="form-select mb-2">
           <?php mysqli_data_seek($categorias, 0); while ($c = mysqli_fetch_assoc($categorias)): ?>
-            <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nome']) ?></option>
+            <option value="<?= $c['id'] ?>"
+              <?= (isset($livroEditando['categoria_id']) && $livroEditando['categoria_id'] == $c['id']) ? 'selected' : '' ?>>
+              <?= htmlspecialchars($c['nome']) ?>
+            </option>
           <?php endwhile; ?>
         </select>
 
-        <input type="number" name="quantidade_total" class="form-control" placeholder="Quantidade" min="1" required>
+        <input type="number" name="quantidade_total" class="form-control" placeholder="Quantidade" min="1"
+               value="<?= htmlspecialchars($livroEditando['quantidade_total'] ?? '') ?>" required>
       </div>
       <div class="modal-footer">
         <button type="submit" class="btn btn-primary">Salvar</button>
@@ -104,5 +131,13 @@ require_once __DIR__ . '/../includes/sidebar.php';
     </form>
   </div>
 </div>
+
+<?php if ($livroEditando): ?>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    new bootstrap.Modal(document.getElementById("modalLivro")).show();
+  });
+</script>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
